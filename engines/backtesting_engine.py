@@ -70,7 +70,8 @@ class BacktestingEngine:
     def process_custom_interval_data(self, stock_code, column_names, custom_interval: int = 5):
         output_dict = {}
         for input_date in self.date_range:
-            custom_dict = DataProcessingInterface.get_custom_interval_data(target_date=input_date,
+            input_datetime = pd.to_datetime(input_date)
+            custom_dict = DataProcessingInterface.get_custom_interval_data(target_date=input_datetime,
                                                                            custom_interval=custom_interval,
                                                                            stock_list=[stock_code])
             for stock_code, df in custom_dict.items():
