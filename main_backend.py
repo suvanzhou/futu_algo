@@ -22,9 +22,8 @@ import json
 import sys
 from datetime import datetime
 from math import ceil
-
 from futu import KLType, Market, SecurityType, SubType
-
+import logging
 from engines import *
 from strategies.Strategies import Strategies
 
@@ -109,9 +108,10 @@ def __init_filter(filter_list: list) -> list:
 
 
 def init_backtesting(strategy_name: str):
-    start_date = datetime(2019, 3, 20).date()
-    end_date = datetime(2021, 3, 23).date()
-    stock_list = YahooFinanceInterface.get_top_30_hsi_constituents()
+    start_date = datetime(2023, 3, 20).date()
+    end_date = datetime(2024, 3, 23).date()
+    # stock_list = YahooFinanceInterface.get_top_30_hsi_constituents()
+    stock_list = json.loads(config.get('TradePreference', 'StockList'))
     bt = BacktestingEngine(stock_list=stock_list, start_date=start_date, end_date=end_date, observation=100)
     bt.prepare_input_data_file_custom_M(custom_interval=5)
     # bt.prepare_input_data_file_1M()
@@ -246,4 +246,5 @@ def main():
 
 
 if __name__ == '__main__':
+
     main()

@@ -15,13 +15,13 @@
 #  Written by Bill Chan <billpwchan@hotmail.com>, 2021
 #  Copyright (c)  billpwchan - All Rights Reserved
 
-
+import os
 import json
 import warnings
 from collections import ChainMap
 from datetime import date, datetime, timedelta
 from multiprocessing import Pool, cpu_count
-
+import logging
 import pandas as pd
 
 from engines.data_engine import DataProcessingInterface, HKEXInterface
@@ -30,6 +30,18 @@ from util import logger
 from util.global_vars import *
 
 warnings.filterwarnings('ignore')
+
+# 配置 logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# 创建根日志记录器
+root_logger = logging.getLogger()
+
+# 创建一个子日志记录器
+default_logger = root_logger.getChild("backtesting")
+
+# 打印 info 级别的日志信息
+default_logger.info('This is an info message for backtesting.')
 
 
 class BacktestingEngine:
@@ -117,6 +129,7 @@ class BacktestingEngine:
         ta_backtesting_data = {}
         for stock_code in self.stock_list:
             # !!! It's concatenated. So have to reset the entire input_data in the strategy!
+            default_logger.debug("11111:%s", stock_code)
             self.strategy.set_input_data_stock_code(stock_code=stock_code,
                                                     input_df=self.strategy.get_input_data_stock_code(
                                                         stock_code=stock_code)[0:0])
@@ -127,7 +140,7 @@ class BacktestingEngine:
             # Remove duplicated indices
             ta_backtesting_data[stock_code] = ta_backtesting_data[stock_code][
                 ~ta_backtesting_data[stock_code].index.duplicated(keep='first')]
-        ta_backtesting_data['HK.01997'].to_csv("STEP 2.csv")
+        ta_backtesting_data[stock_code].to_csv("STEP 2.csv")
 
         # Gather all unique dates
         sequence_time = list(unique_time)
@@ -167,9 +180,9 @@ class BacktestingEngine:
                         # Update Holding Capital
                         self.capital -= current_price * qty
                         # Update Transaction History Dataframe
-                        self.transactions = self.transactions.append(
-                            pd.Series([row['time_key'], stock_code, current_price, qty, 'BUY'],
-                                      index=self.transactions.columns), ignore_index=True)
+                        new_row = pd.Series([row['time_key'], stock_code, current_price, qty, 'BUY'],
+                                            index=self.transactions.columns)
+                        self.transactions = pd.concat([self.transactions, new_row.to_frame().T], ignore_index=True)
                         self.default_logger.info(f"SIMULATE BUY ORDER for {stock_code} using PRICE {row['close']}")
                     elif self.positions.get(stock_code, 0) != 0:
                         self.default_logger.info(
@@ -190,9 +203,9 @@ class BacktestingEngine:
 
                         self.returns_df.loc[str(current_date), stock_code] += profit
                         self.capital += current_price * qty
-                        self.transactions = self.transactions.append(
-                            pd.Series([row['time_key'], stock_code, current_price, qty, 'SELL'],
-                                      index=self.transactions.columns), ignore_index=True)
+                        new_row = pd.Series([row['time_key'], stock_code, current_price, qty, 'SELL'],
+                                      index=self.transactions.columns)
+                        self.transactions = pd.concat([self.transactions, new_row.to_frame().T], ignore_index=True)
                         self.default_logger.info(f"SIMULATE SELL ORDER FOR {stock_code} using PRICE {row['close']}")
                         self.default_logger.info(f"PROFIT earned: {profit}")
                         # Update Positions
@@ -200,6 +213,10 @@ class BacktestingEngine:
 
         self.returns_df['returns'] = self.returns_df.sum(axis=1)
         time_key = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
+        # 检查目录是否存在，如果不存在则创建
+        output_dir = './backtesting_report'
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
         self.returns_df.to_csv(f'./backtesting_report/{time_key}_Returns.csv')
         self.transactions.to_csv(f'./backtesting_report/{time_key}_Transactions.csv')
 

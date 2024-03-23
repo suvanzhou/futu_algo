@@ -19,11 +19,24 @@
 from abc import ABC, abstractmethod
 
 import pandas as pd
+import logging
 
+# 配置 logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# 创建根日志记录器
+root_logger = logging.getLogger()
+
+# 创建一个子日志记录器
+default_logger = root_logger.getChild("backtesting")
+
+# 打印 info 级别的日志信息
+default_logger.info('This is an info message for backtesting.')
 
 class Strategies(ABC):
     def __init__(self, input_data: dict):
         self.input_data = input_data
+        default_logger.debug("input——data:%s", self.input_data)
         super().__init__()
 
     @abstractmethod
